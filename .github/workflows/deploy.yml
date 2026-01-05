@@ -21,7 +21,7 @@ jobs:
           bun install
           bun run build
 
-            - name: Deploy to EC2
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -38,4 +38,3 @@ jobs:
             bun run build
             pm2 restart nextjs-demo || pm2 start ecosystem.config.js
             pm2 save
-
