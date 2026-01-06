@@ -10,13 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: Setup Bun (CI only)
         uses: oven-sh/setup-bun@v1
 
-      - name: Install & Build (CI check)
+      - name: Build (CI validation)
         run: |
           bun install
           bun run build
@@ -27,14 +27,29 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
           script: |
-            set -e
+            set -eux
+
+            # Force PATH (non-interactive shell fix)
+            export HOME=/home/ubuntu
             export BUN_INSTALL="$HOME/.bun"
-            export PATH="$BUN_INSTALL/bin:$PATH"
+            export PATH="$BUN_INSTALL/bin:/usr/local/bin:/usr/bin:$PATH"
+
+            echo "PATH=$PATH"
+            which bun
+            which pm2 || npm install -g pm2
 
             cd /var/www/nextjs-demo
+
+            git reset --hard
             git pull origin main
+
             bun install
             bun run build
-            pm2 restart nextjs-demo || pm2 start ecosystem.config.js
+
+            pm2 describe nextjs-demo >/dev/null \
+              && pm2 restart nextjs-demo \
+              || pm2 start ecosystem.config.js --name nextjs-demo
+
             pm2 save
